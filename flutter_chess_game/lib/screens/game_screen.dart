@@ -141,7 +141,7 @@ class _GameScreenState extends State<GameScreen> {
       isWhite: false,
       imagePath: 'lib/images/black-queen.png',
     );
-    newBoard[7][4] = ChessPiece(
+    newBoard[7][3] = ChessPiece(
       type: ChessPieceType.queen,
       isWhite: true,
       imagePath: 'lib/images/black-queen.png',
@@ -153,7 +153,7 @@ class _GameScreenState extends State<GameScreen> {
       isWhite: false,
       imagePath: 'lib/images/black-king.png',
     );
-    newBoard[7][3] = ChessPiece(
+    newBoard[7][4] = ChessPiece(
       type: ChessPieceType.king,
       isWhite: true,
       imagePath: 'lib/images/black-king.png',
