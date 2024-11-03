@@ -3,7 +3,7 @@ import 'package:flutter_chess_game/components/piece.dart';
 import 'package:flutter_chess_game/components/square.dart';
 import 'package:flutter_chess_game/helper/helper_methods.dart';
 import 'package:flutter_chess_game/values/colors.dart';
-
+import 'home_screen.dart';
 import '../components/dead_piece.dart';
 
 class GameScreen extends StatefulWidget {
@@ -382,7 +382,16 @@ class _GameScreenState extends State<GameScreen> {
       showDialog(context: context, builder: (context) => AlertDialog(
         title: const Text("XEQUE-MATE"),
         actions: [
-          TextButton(onPressed: resetGame, child: const Text("Jogar novamente"))
+          TextButton(onPressed: resetGame, child: const Text("Jogar novamente")),
+          TextButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => HomeScreen(isDarkMode: false)), // Ajuste para passar o parâmetro isDarkMode
+              );
+            },
+            child: const Text("Voltar ao início"),
+          ),
         ],
       ));
     }
