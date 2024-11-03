@@ -4,6 +4,8 @@ import 'package:flutter_chess_game/components/square.dart';
 import 'package:flutter_chess_game/helper/helper_methods.dart';
 import 'package:flutter_chess_game/values/colors.dart';
 
+import '../components/dead_piece.dart';
+
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key});
   
@@ -31,6 +33,15 @@ class _GameScreenState extends State<GameScreen> {
   List<ChessPiece> whitePiecesTaken = [];
 
   List<ChessPiece> blackPiecesTaken = [];
+
+  //indicar de quem é a vez
+  bool isWhiteTurn = true;
+
+  //posicao inicial para facilitar ver se o rei está em cheque
+  List<int> whiteKingPosition = [7, 4];
+  List<int> blackKingPosition = [0, 4];
+  bool checkStatus = false;
+
 
   @override
   void initState(){
@@ -155,15 +166,18 @@ class _GameScreenState extends State<GameScreen> {
     setState((){
       //selected piece if teh is a piece in that position
       if (selectedPiece == null && board[row][col] != null) {
-        selectedPiece = board[row][col];
-        selectedRow = row;
-        selectedCol = col;
-      }else if (board[row][col] != null &&
+        if (board[row][col]!.isWhite == isWhiteTurn) {
+          selectedPiece = board[row][col];
+          selectedRow = row;
+          selectedCol = col;
+        }
+      } else if (board[row][col] != null &&
         board[row][col]!.isWhite == selectedPiece!.isWhite) {
         selectedPiece = board[row][col];
         selectedRow = row;
         selectedCol = col;
       }
+
       //se a paeca for selecionada e o movimento for valido
       else if(selectedPiece != null &&
           validMoves.any((element) => element[0] == row && element[1] == col)){
@@ -171,12 +185,33 @@ class _GameScreenState extends State<GameScreen> {
       }
 
       //if a piece is selected, calculate is valid moves
-      validMoves = calculatedRowValidMoves(selectedRow,selectedCol,selectedPiece);
+      validMoves = calculateRealValidMoves(selectedRow,selectedCol,selectedPiece, true);
 
     });
   }
 
-  //calculate raw valid moves
+  List<List<int>> calculateRealValidMoves(int row, int col, ChessPiece? piece, bool checkSimulation) {
+    List<List<int>> realValidMoves = [];
+    List<List<int>> candidateMoves = calculatedRowValidMoves(row, col, piece);
+
+    //filtrar movimentos em xeque
+    if (checkSimulation){
+      for (var move in candidateMoves){
+        int endRow = move[0];
+        int endCol = move[1];
+
+        //simula o movimento para ver se é seguro
+        if (simulatedMoveIsSafe(piece!, row, col, endRow, endCol)){
+          realValidMoves.add(move);
+        }
+      }
+    } else {
+      realValidMoves = candidateMoves;
+    }
+
+    return realValidMoves;
+  }
+
   List<List<int>> calculatedRowValidMoves(int row, int col, ChessPiece? piece){
     List<List<int>> candidateMoves = [];
 
@@ -184,7 +219,9 @@ class _GameScreenState extends State<GameScreen> {
       return [];
     }
 
-    int direction = piece!.isWhite? -1 : 1;
+    final ChessPiece currentPiece = piece; // Non-nullable variable
+
+    int direction = currentPiece.isWhite ? -1 : 1;
 
     switch (piece.type) {
       case ChessPieceType.pawn:
@@ -302,9 +339,10 @@ class _GameScreenState extends State<GameScreen> {
     }
     return candidateMoves;
   }
+
   void movePiece(int newRow, int newCol){
     //se o novo lugar for uma peça inimigo
-    if (board[newRow][newRow] != null){
+    if (board[newRow][newCol] != null){
        //adicionar a peça pega na lista
       var capturedPiece = board[newRow][newCol];
       if (capturedPiece!.isWhite){
@@ -312,11 +350,26 @@ class _GameScreenState extends State<GameScreen> {
       } else {
         blackPiecesTaken.add(capturedPiece);
       }
+    }
 
+    //checa se a peca sendo movie é um rei
+    if (selectedPiece!.type == ChessPieceType.king){
+      if (selectedPiece!.isWhite) {
+        whiteKingPosition = [newRow, newCol];
+      } else {
+        blackKingPosition = [newRow, newCol];
+      }
     }
 
     board[newRow][newCol] = selectedPiece;
     board[selectedRow][selectedCol] = null;
+
+    // veja se algum rei estão sob ataque
+    if (isKingInCheck(!isWhiteTurn)){
+      checkStatus = true;
+    } else {
+      checkStatus = false;
+    }
 
     setState(() {
       selectedPiece = null;
@@ -324,8 +377,122 @@ class _GameScreenState extends State<GameScreen> {
       selectedCol = -1;
       validMoves = [];
     });
+    //se for xeque-mate
+    if (isCheckMate(!isWhiteTurn)){
+      showDialog(context: context, builder: (context) => AlertDialog(
+        title: const Text("XEQUE-MATE"),
+        actions: [
+          TextButton(onPressed: resetGame, child: const Text("Jogar novamente"))
+        ],
+      ));
+    }
+    //mudar a vez
+    isWhiteTurn = !isWhiteTurn;
 
+    //
   }
+
+  bool isKingInCheck(bool isWhiteKing){
+
+    List<int> kingPosition = isWhiteKing ? whiteKingPosition : blackKingPosition;
+
+    //ver se alguma peca inimiga pode atacar o rei
+    for (int i= 0; i <8; i++){
+      for (int j = 0; j <8; j++){
+        //pula espaços vazios
+        if (board[i][j] == null || board[i][j]!.isWhite == isWhiteKing){
+          continue;
+        }
+
+        List<List<int>> pieceValidMoves =
+            calculateRealValidMoves(i, j, board[i][j], false);
+
+        if (pieceValidMoves.any((move) => move[0] == kingPosition[0] && move[1] == kingPosition[1])){
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  bool simulatedMoveIsSafe(ChessPiece piece, int startRow, int startCol, int endRow, int endCol) {
+
+      // save the current board state
+      ChessPiece? originalDestinationPiece = board[endRow][endCol];
+
+      // if the piece is the king, save its current position and update to the new one
+      List<int>? originalKingPosition;
+      if (piece.type == ChessPieceType.king) {
+        originalKingPosition = piece.isWhite ? whiteKingPosition : blackKingPosition;
+        if (piece.isWhite) {
+          whiteKingPosition = [endRow, endCol];
+        } else {
+          blackKingPosition = [endRow, endCol];
+        }
+      }
+
+        // simulate the move
+    board[endRow][endCol] = piece;
+    board[startRow][startCol] = null;
+
+    // check if our own king is under attack
+    bool kingInCheck = isKingInCheck(piece.isWhite);
+
+    // restore board to original state
+    board[startRow][startCol] = piece;
+    board[endRow][endCol] = originalDestinationPiece;
+
+    // if the piece was the king, restore its original position
+    if (piece.type == ChessPieceType.king) {
+      if (piece.isWhite) {
+        whiteKingPosition = originalKingPosition!;
+      } else {
+        blackKingPosition = originalKingPosition!;
+      }
+    }
+
+    //se o rei
+    return !kingInCheck;
+  }
+
+  //checkmate
+  bool isCheckMate(bool isWhiteKing){
+    //se o rei tiver
+    if (!isKingInCheck(isWhiteKing)){
+      return false;
+    }
+
+    //se tiver ao menos um movemnto legal possivel
+    for (int i =0; i < 8;i++){
+      for (int j =0; j < 8;j++){
+        if(board[i][j] == null || board[i][j]!.isWhite != isWhiteKing){
+          continue;
+        }
+
+        List<List<int>> pieceValidMoves = calculateRealValidMoves(i, j, board[i][j], true);
+
+        if (pieceValidMoves.isNotEmpty){
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  void resetGame(){
+    Navigator.pop(context);
+    _initializeBoard();
+    checkStatus = false;
+    whitePiecesTaken.clear();
+    blackPiecesTaken.clear();
+    List<int> whiteKingPosition = [7, 4];
+    List<int> blackKingPosition = [0, 4];
+    setState(() {
+
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -336,15 +503,21 @@ class _GameScreenState extends State<GameScreen> {
           Expanded(
             child: GridView.builder(
               itemCount: whitePiecesTaken.length,
+              physics: const NeverScrollableScrollPhysics(),
               gridDelegate:
               const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 8),
-                itemBuilder: (context, index) => DeadPiece(),
+                itemBuilder: (context, index) => DeadPiece(
+                  imagePath: whitePiecesTaken[index].imagePath,
+                  isWhite: true,
+                ),
             ),
           ),
 
+          Text(checkStatus ? "XEQUE!" : ""),
 
           //chess board
           Expanded(
+            flex: 3,
             child: GridView.builder(
             gridDelegate:
               const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 8),
@@ -373,6 +546,19 @@ class _GameScreenState extends State<GameScreen> {
                 onTap: () => pieceSelected(row, col),
               );
             },
+            ),
+          ),
+
+          Expanded(
+            child: GridView.builder(
+              itemCount: blackPiecesTaken.length,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate:
+              const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 8),
+              itemBuilder: (context, index) => DeadPiece(
+                imagePath: blackPiecesTaken[index].imagePath,
+                isWhite: false,
+              ),
             ),
           ),
         ]
