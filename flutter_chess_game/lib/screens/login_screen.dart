@@ -3,8 +3,6 @@ import '../helper/database_helper.dart';
 import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
- 
-
   @override
   _LoginScreenState createState() => _LoginScreenState();
 }
@@ -18,8 +16,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool _isLoginMode = true; // Alterna entre Login e Registro
   bool _isLoading = false;
-  
-  get isDarkMode => null;
+
+  get isDarkMode => false;
 
   Future<void> _handleLoginOrRegister() async {
     if (!_formKey.currentState!.validate()) return;
@@ -129,6 +127,19 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Text(_isLoginMode
                     ? 'Não tem uma conta? Registre-se'
                     : 'Já tem uma conta? Faça login'),
+              ),
+              SizedBox(height: 20),
+              // Botão para voltar para a tela Home diretamente
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => HomeScreen(isDarkMode: isDarkMode),
+                    ),
+                  );
+                },
+                child: Text('Voltar para Home'),
               ),
             ],
           ),

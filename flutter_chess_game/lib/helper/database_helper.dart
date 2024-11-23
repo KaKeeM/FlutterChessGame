@@ -17,7 +17,7 @@ class DatabaseHelper {
   }
 
   Future<Database> _initDB() async {
-    
+    // Caminho fixo para o banco de dados no sandbox do aplicativo
     String databasePath = await getDatabasesPath();
     String path = join(databasePath, 'user_database.db');
     return await openDatabase(
@@ -38,7 +38,7 @@ class DatabaseHelper {
     ''');
   }
 
-  // Metodo para registrar um novo usuário
+  // Método para registrar um novo usuário
   Future<bool> registerUser(String username, String email, String password) async {
     try {
       final db = await database;
@@ -59,14 +59,14 @@ class DatabaseHelper {
         'email': email,
         'password': password,
       });
-      return true; 
+      return true; // Registro bem-sucedido
     } catch (e) {
       print('Erro ao registrar usuário: $e');
-      return false; 
+      return false; // Falha no registro
     }
   }
 
-  // Mwtodo para validar o login
+  // Método para validar o login
   Future<bool> validateUser(String email, String password) async {
     final db = await database;
     final result = await db.query(
