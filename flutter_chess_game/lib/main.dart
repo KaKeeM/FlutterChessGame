@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'screens/credits_screen.dart';
+import 'screens/login_screen.dart';
 import 'screens/game_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/settings_screen.dart';
@@ -27,15 +28,19 @@ class _ChessAppState extends State<ChessApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Chess Game',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      initialRoute: '/', // Rota inicial
+      theme: AppThemes.lightTheme, // Tema claro
+      darkTheme: AppThemes.darkTheme, // Tema escuro
+      themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light, // Alterna o tema
+      initialRoute: '/',
       routes: {
-        '/': (context) => HomeScreen(isDarkMode: false), // Rota inicial para HomeScreen
-        '/home': (context) => HomeScreen(isDarkMode: false), // Rota para HomeScreen
-        '/game': (context) => GameScreen(), // Rota para GameScreen
-        '/credits': (context) => CreditsScreen(), // Rota para CreditsScreen
+        '/': (context) => LoginScreen(),
+        '/home': (context) => HomeScreen(isDarkMode: isDarkMode),
+        '/game': (context) => GameScreen(),
+        '/credits': (context) => CreditsScreen(),
+        '/settings': (context) => SettingsScreen(
+              toggleTheme: toggleTheme,
+              isDarkMode: isDarkMode,
+            ),
       },
     );
   }

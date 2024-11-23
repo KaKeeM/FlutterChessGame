@@ -14,11 +14,6 @@ class CreditsScreen extends StatelessWidget {
             Column(
               children: [
                 Text(
-                  'Daniel',
-                  style: TextStyle(fontSize: 20, color: Theme.of(context).textTheme.bodyLarge?.color),
-                ),
-                SizedBox(height: 10),
-                Text(
                   'Igor',
                   style: TextStyle(fontSize: 20, color: Theme.of(context).textTheme.bodyLarge?.color),
                 ),
